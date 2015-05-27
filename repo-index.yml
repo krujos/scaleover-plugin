@@ -1,0 +1,25 @@
+- name: Scaleover
+  description: Roll traffic from one app to another by scaling over time
+  version: 1.0.0
+  created: 2015-5-27
+  updated: 2015-5-27
+  company:
+  authors:
+  - name: Guido Westenberg
+    homepage: http://github.com/guidowb
+    contact: gwestenberg@pivotal.io
+  - name: Josh Kruck
+    homepage: http://github.com/krujos/
+    contact: jkruck@pivotal.io
+
+  homepage: http://github.com/krujos/scaleover-plugin
+  binaries:
+  - platform: osx
+    url: http://github.com/krujos/scaleover-plugin/raw/master/bin/osx/scaleover-plugin
+    checksum: osx-sha1
+  - platform: win64
+    url: http://github.com/krujos/scaleover-plugin/raw/master/bin/win64/scaleover-plugin.exe
+    checksum: win64-sha1
+  - platform: linux64
+    url: http://github.com/krujos/scaleover-plugin/raw/master/bin/linux64/scaleover-plugin
+    checksum: linux64-sha1
