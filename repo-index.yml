@@ -1,6 +1,6 @@
 - name: Scaleover
   description: Roll traffic from one app to another by scaling over time
-  version: 1.0.0
+  version: 0.0.1
   created: 2015-5-27
   updated: 2015-5-27
   company:
