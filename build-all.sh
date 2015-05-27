@@ -2,8 +2,6 @@
 
 : ${TAG:?"Need to set TAG non-empty"}
 
-git tag $TAG
-
 GOOS=linux GOARCH=amd64 go build
 LINUX64_SHA1=`cat scaleover-plugin | openssl sha1`
 mkdir -p bin/linux64
@@ -27,3 +25,6 @@ sed "s/_TAG_/$TAG/" |
 cat
 
 go build
+
+git commit -am "Build version $TAG"
+git tag $TAG
