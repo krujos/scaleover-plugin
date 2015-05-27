@@ -5,6 +5,7 @@
 git tag | grep $TAG > /dev/null 2>&1 
 if [ $? -eq 0 ] ; then 
 	echo "$TAG exists, remove it or increment"
+	exit 1
 fi
 
 GOOS=linux GOARCH=amd64 go build
