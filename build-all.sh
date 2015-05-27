@@ -1,11 +1,14 @@
 #!/bin/sh
 
-: ${TAG:?"Need to set TAG non-empty"}
+if [[ "$1" = "release" ]] ; then 
+	TAG="$2"
+	: ${TAG:?"Usage: build_all.sh [release] [TAG]"}
 
-git tag | grep $TAG > /dev/null 2>&1 
-if [ $? -eq 0 ] ; then 
-	echo "$TAG exists, remove it or increment"
-	exit 1
+	git tag | grep $TAG > /dev/null 2>&1 
+	if [ $? -eq 0 ] ; then 
+		echo "$TAG exists, remove it or increment"
+		exit 1
+	fi
 fi
 
 GOOS=linux GOARCH=amd64 go build
@@ -30,7 +33,10 @@ sed "s/linux64-sha1/$LINUX64_SHA1/" |
 sed "s/_TAG_/$TAG/" |
 cat
 
+#Final build gives developer a plugin to install
 go build
 
-git commit -am "Build version $TAG"
-git tag $TAG
+if [[ "$1" = "release" ]] ; then 
+	git commit -am "Build version $TAG"
+	git tag $TAG
+fi
