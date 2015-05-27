@@ -39,5 +39,6 @@ go build
 if [[ "$1" = "release" ]] ; then 
 	git commit -am "Build version $TAG"
 	git tag $TAG
-	echo "Tagged release, 'git push --tags' to move it to github"
+	echo "Tagged release, 'git push --tags' to move it to github, and copy the output above"
+	echo "to the cli repo you plan to deploy in"
 fi
