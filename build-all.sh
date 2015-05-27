@@ -2,6 +2,11 @@
 
 : ${TAG:?"Need to set TAG non-empty"}
 
+git tag $TAG > /dev/null 2>&1 
+if [ $? -eq 0 ] ; then 
+	echo "$TAG exists, remove it or increment"
+fi
+
 GOOS=linux GOARCH=amd64 go build
 LINUX64_SHA1=`cat scaleover-plugin | openssl sha1`
 mkdir -p bin/linux64
