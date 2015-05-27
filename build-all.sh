@@ -2,7 +2,7 @@
 
 : ${TAG:?"Need to set TAG non-empty"}
 
-git tag $TAG > /dev/null 2>&1 
+git tag | grep $TAG > /dev/null 2>&1 
 if [ $? -eq 0 ] ; then 
 	echo "$TAG exists, remove it or increment"
 fi
