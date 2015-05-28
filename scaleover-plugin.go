@@ -2,17 +2,30 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/cloudfoundry/cli/plugin"
+	"github.com/andrew-d/go-termutil"
 )
 
-type CliCmd struct{}
+type AppStatus struct {
+	name string
+	countRunning int
+	countRequested int
+	state string
+}
+
+type ScaleoverCmd struct {
+	app1 AppStatus
+	app2 AppStatus
+	maxcount int
+}
 
 //GetMetadata returns metatada
-func (c *CliCmd) GetMetadata() plugin.PluginMetadata {
+func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 	return plugin.PluginMetadata{
 		Name: "scaleover",
 		Version: plugin.VersionType{
@@ -33,49 +46,111 @@ func (c *CliCmd) GetMetadata() plugin.PluginMetadata {
 }
 
 func main() {
-	plugin.Start(new(CliCmd))
+	plugin.Start(new(ScaleoverCmd))
 }
 
-func (c *CliCmd) Run(cliConnection plugin.CliConnection, args []string) {
-	var firstAppInstanceCount int
+func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
 
-	//TODO Check for apps!
-	rolloverTime, _ := strconv.Atoi(args[3])
-	app1 := args[1]
-	app2 := args[2]
+	rolloverTime, err := strconv.Atoi(args[3])
+	if (err != nil) {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-	fmt.Println("Starting scaleover of", app1, "to", app2)
-	output, _ := cliConnection.CliCommandWithoutTerminalOutput(
-		"scale", app1)
-	for _, v := range output {
-		if strings.HasPrefix(v, "instances:") {
-			tmp := strings.TrimSpace(strings.TrimPrefix(v, "instances: "))
-			firstAppInstanceCount, _ = strconv.Atoi(tmp)
+	// The getAppStatus calls will exit with an error if the named apps don't exist
+	cmd.app1 = cmd.getAppStatus(cliConnection, args[1])
+	cmd.app2 = cmd.getAppStatus(cliConnection, args[2])
+
+	cmd.showStatus()
+
+	count := cmd.app1.countRequested
+	sleepInterval := rolloverTime / count
+
+	for count > 0 {
+		count--
+		cmd.app2.scaleUp(cliConnection)
+		cmd.app1.scaleDown(cliConnection)
+		cmd.showStatus()
+		if (count > 0) {
+			time.Sleep(time.Duration(sleepInterval) * time.Second)
 		}
 	}
+	fmt.Println()
+}
 
-	sleepInterval := rolloverTime / firstAppInstanceCount
-
-	fmt.Println("starting", app2)
-	cliConnection.CliCommandWithoutTerminalOutput(
-		"scale", "-i", strconv.Itoa(1), app2)
-	cliConnection.CliCommandWithoutTerminalOutput("start", app2)
-	fmt.Println(app2, "is started")
-
-	for i := firstAppInstanceCount - 1; i > 0; i-- {
-		cliConnection.CliCommandWithoutTerminalOutput(
-			"scale", "-i", strconv.Itoa(i), app1)
-
-		app2Instances := strconv.Itoa(firstAppInstanceCount - i + 1)
-		cliConnection.CliCommandWithoutTerminalOutput(
-			"scale", "-i", app2Instances, app2)
-
-		fmt.Println("Scaled", app1, "to", i, app2, "to", app2Instances)
-		time.Sleep(time.Duration(sleepInterval) * time.Second)
+func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name string) AppStatus {
+	var state string
+	var countRunning int
+	var countRequested int
+	output, err := cliConnection.CliCommandWithoutTerminalOutput("app", name)
+	if (err != nil) {
+		fmt.Println(err)
+		os.Exit(1)
 	}
+	for _, v := range output {
+		v = strings.TrimSpace(v)
+		if strings.HasPrefix(v, "requested state: ") {
+			state = strings.TrimPrefix(v, "requested state: ")
+		}
+		if strings.HasPrefix(v, "instances: ") {
+			instances := strings.TrimPrefix(v, "instances: ")
+			split := strings.Split(instances, "/")
+			countRunning, _ = strconv.Atoi(split[0])
+			countRequested, _ = strconv.Atoi(split[1])
+		}
+	}
+	// Compensate for some CF weirdness that leaves the requested instances non-zero
+	// even though the app is stopped
+	if (state == "stopped") {
+		countRequested = 0
+	}
+	return AppStatus {
+		name: name,
+		countRunning: countRunning,
+		countRequested: countRequested,
+		state: state,
+	}
+}
 
-	fmt.Println("Stopping", app1)
-	cliConnection.CliCommandWithoutTerminalOutput("stop", app1)
-	fmt.Println("Scaleover complete!")
+func (app* AppStatus) scaleUp(cliConnection plugin.CliConnection) {
+	// If not already started, start it
+	if (app.state != "started") {
+		cliConnection.CliCommandWithoutTerminalOutput("start", app.name)
+		app.state = "started"
+	}
+	app.countRequested++;
+	cliConnection.CliCommandWithoutTerminalOutput("scale", "-i", strconv.Itoa(app.countRequested), app.name)
+}
 
+func (app* AppStatus) scaleDown(cliConnection plugin.CliConnection) {
+	app.countRequested--;
+	// If going to zero, stop the app
+	if (app.countRequested == 0) {
+		cliConnection.CliCommandWithoutTerminalOutput("stop", app.name)
+		app.state = "stopped"
+	} else {
+		cliConnection.CliCommandWithoutTerminalOutput("scale", "-i", strconv.Itoa(app.countRequested), app.name)
+	}
+}
+
+func (cmd *ScaleoverCmd) showStatus() {
+	if termutil.Isatty(os.Stdout.Fd()) {
+		fmt.Printf("%s (%s) %s %s %s (%s) \r",
+			cmd.app1.name,
+			cmd.app1.state,
+			strings.Repeat("<", cmd.app1.countRequested),
+			strings.Repeat(">", cmd.app2.countRequested),
+			cmd.app2.name,
+			cmd.app2.state,
+		)
+	} else {
+		fmt.Printf("%s (%s) %d instances, %s (%s) %d instances\n",
+			cmd.app1.name,
+			cmd.app1.state,
+			cmd.app1.countRequested,
+			cmd.app2.name,
+			cmd.app2.state,
+			cmd.app2.countRequested,
+		)
+	}
 }
