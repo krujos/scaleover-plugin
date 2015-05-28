@@ -51,10 +51,14 @@ func main() {
 
 func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
 
-	rolloverTime, err := strconv.Atoi(args[3])
-	if (err != nil) {
-		fmt.Println(err)
-		os.Exit(1)
+	rolloverTime := time.Duration(0)
+	var err error
+	if (len(args) > 3) {
+		rolloverTime, err = time.ParseDuration(args[3])
+		if (err != nil) {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
@@ -64,7 +68,7 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 	cmd.showStatus()
 
 	count := cmd.app1.countRequested
-	sleepInterval := rolloverTime / count
+	sleepInterval := time.Duration(rolloverTime.Nanoseconds() / int64(count))
 
 	for count > 0 {
 		count--
@@ -72,7 +76,7 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 		cmd.app1.scaleDown(cliConnection)
 		cmd.showStatus()
 		if (count > 0) {
-			time.Sleep(time.Duration(sleepInterval) * time.Second)
+			time.Sleep(sleepInterval)
 		}
 	}
 	fmt.Println()
