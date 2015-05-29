@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -38,7 +39,7 @@ func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 				Name:     "scaleover",
 				HelpText: "Roll http traffic from one application to another",
 				UsageDetails: plugin.Usage{
-					Usage: "cf scaleover APP1 APP2 TIME",
+					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION",
 				},
 			},
 		},
@@ -49,21 +50,40 @@ func main() {
 	plugin.Start(new(ScaleoverCmd))
 }
 
-func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
-
+func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
 	rolloverTime := time.Duration(0)
 	var err error
-	if (len(args) > 3) {
-		rolloverTime, err = time.ParseDuration(args[3])
-		if (err != nil) {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	rolloverTime, err = time.ParseDuration(duration)
+
+	if err != nil {
+		return rolloverTime, err
+	}
+	if 0 > rolloverTime {
+		return rolloverTime, errors.New("Duration must be a positive number in the format of 1m")
+	}
+
+	return rolloverTime, nil
+}
+
+func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
+
+	rolloverTime, err := cmd.parseTime(args[3])
+	if nil != err {
+		fmt.Println(err)
+		return
 	}
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
-	cmd.app1 = cmd.getAppStatus(cliConnection, args[1])
-	cmd.app2 = cmd.getAppStatus(cliConnection, args[2])
+	cmd.app1, err = cmd.getAppStatus(cliConnection, args[1])
+	if nil != err {
+		fmt.Println(err)
+		return
+	}
+	cmd.app2, err = cmd.getAppStatus(cliConnection, args[2])
+	if nil != err {
+		fmt.Println(err)
+		return
+	}
 
 	cmd.showStatus()
 
@@ -75,45 +95,45 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 		cmd.app2.scaleUp(cliConnection)
 		cmd.app1.scaleDown(cliConnection)
 		cmd.showStatus()
-		if (count > 0) {
+		if count > 0 {
 			time.Sleep(sleepInterval)
 		}
 	}
 	fmt.Println()
 }
 
-func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name string) AppStatus {
-	var state string
-	var countRunning int
-	var countRequested int
-	output, err := cliConnection.CliCommandWithoutTerminalOutput("app", name)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name string) (AppStatus, error) {
+	status := AppStatus{
+		name:           name,
+		countRunning:   0,
+		countRequested: 0,
+		state:          "unknown",
 	}
-	for _, v := range output {
+
+	output, _ := cliConnection.CliCommandWithoutTerminalOutput("app", name)
+
+	for idx, v := range output {
 		v = strings.TrimSpace(v)
+		if strings.HasPrefix(v, "FAILED") {
+			e := output[idx+1]
+			return status, errors.New(e)
+		}
 		if strings.HasPrefix(v, "requested state: ") {
-			state = strings.TrimPrefix(v, "requested state: ")
+			status.state = strings.TrimPrefix(v, "requested state: ")
 		}
 		if strings.HasPrefix(v, "instances: ") {
 			instances := strings.TrimPrefix(v, "instances: ")
 			split := strings.Split(instances, "/")
-			countRunning, _ = strconv.Atoi(split[0])
-			countRequested, _ = strconv.Atoi(split[1])
+			status.countRunning, _ = strconv.Atoi(split[0])
+			status.countRequested, _ = strconv.Atoi(split[1])
 		}
 	}
 	// Compensate for some CF weirdness that leaves the requested instances non-zero
 	// even though the app is stopped
-	if state == "stopped" {
-		countRequested = 0
+	if "stopped" == status.state {
+		status.countRequested = 0
 	}
-	return AppStatus{
-		name:           name,
-		countRunning:   countRunning,
-		countRequested: countRequested,
-		state:          state,
-	}
+	return status, nil
 }
 
 func (app *AppStatus) scaleUp(cliConnection plugin.CliConnection) {
