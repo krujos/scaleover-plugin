@@ -42,7 +42,7 @@ This `node_v1.0 (started) <<< >>>>>>> node_v1.1 (started)` bit in the middle is 
 #####Install from CLI
   ```
   $ cf add-plugin-repo CF-Community http://plugins.cloudfoundry.org/
-  $ cf install-plugin targets -r scaleover
+  $ cf install-plugin scaleover -r CF-Community
   ```
   
   
@@ -52,5 +52,5 @@ This `node_v1.0 (started) <<< >>>>>>> node_v1.1 (started)` bit in the middle is 
   $ go get github.com/krujos/scaleover-plugin
   $ cd $GOPATH/src/github.com/krujos/scaleover-plugin
   $ go build
-  $ cf install-plugin cf-targets-plugin
+  $ cf install-plugin scaleover-plugin
   ```
