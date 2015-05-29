@@ -67,10 +67,16 @@ func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
 
 func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
 
+	if 4 != len(args) {
+		fmt.Println("Usage: cf scaleover")
+		fmt.Println("\tcf scaleover APP1 APP2 ROLLOVER_DURATION")
+		os.Exit(1)
+	}
+
 	rolloverTime, err := cmd.parseTime(args[3])
 	if nil != err {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
@@ -82,7 +88,7 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 	cmd.app2, err = cmd.getAppStatus(cliConnection, args[2])
 	if nil != err {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
 
 	cmd.showStatus()
