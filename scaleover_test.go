@@ -158,6 +158,31 @@ var _ = Describe("Scaleover", func() {
 			appStatus.scaleDown(fakeCliConnection)
 			Expect(appStatus.state).To(Equal("stopped"))
 		})
+
+		It("Scales down the app", func() {
+			appStatus.countRequested = 2
+			appStatus.scaleDown(fakeCliConnection)
+			Expect(appStatus.countRunning).To(Equal(1))
+			Expect(fakeCliConnection.CliCommandWithoutTerminalOutputCallCount()).To(Equal(1))
+		})
 	})
 
+	Describe("Usage", func() {
+		BeforeEach(func() {
+			scaleoverCmdPlugin = &ScaleoverCmd{}
+
+		})
+		It("shows usage for too few arguments", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover"})).NotTo(BeNil())
+		})
+
+		It("shows usage for too many arguments", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m", "foo"})).NotTo(BeNil())
+		})
+
+		It("is just right", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m"})).To(BeNil())
+		})
+
+	})
 })

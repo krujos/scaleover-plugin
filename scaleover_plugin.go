@@ -50,6 +50,13 @@ func main() {
 	plugin.Start(new(ScaleoverCmd))
 }
 
+func (cmd *ScaleoverCmd) usage(args []string) error {
+	if 4 != len(args) {
+		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION")
+	}
+	return nil
+}
+
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
 	rolloverTime := time.Duration(0)
 	var err error
@@ -67,9 +74,9 @@ func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
 
 func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
 
-	if 4 != len(args) {
-		fmt.Println("Usage: cf scaleover")
-		fmt.Println("\tcf scaleover APP1 APP2 ROLLOVER_DURATION")
+	err := cmd.usage(args)
+	if nil != err {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
