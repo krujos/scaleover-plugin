@@ -83,8 +83,9 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 	cmd.app1, err = cmd.getAppStatus(cliConnection, args[1])
 	if nil != err {
 		fmt.Println(err)
-		return
+		os.Exit(1)
 	}
+
 	cmd.app2, err = cmd.getAppStatus(cliConnection, args[2])
 	if nil != err {
 		fmt.Println(err)
