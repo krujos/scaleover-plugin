@@ -22,3 +22,4 @@ _testmain.go
 *.test
 *.prof
 scaleover-plugin
+coverage.out
