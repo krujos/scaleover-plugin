@@ -39,7 +39,8 @@ node_v1.1   started           10/10       128M     1G     node_v1.1.10.244.0.34.
 This `node_v1.0 (started) <<< >>>>>>> node_v1.1 (started)` bit in the middle is a way cool ascii art animation that's worth the price of admission alone. 
 
 ##Installation
-#####Install from CLI
+#####Install from CLI 
+This won't work until [this](https://github.com/cloudfoundry-incubator/cli-plugin-repo/pull/24) PR is merged into the CLI Plugin repo.
   ```
   $ cf add-plugin-repo CF-Community http://plugins.cloudfoundry.org/
   $ cf install-plugin scaleover -r CF-Community
