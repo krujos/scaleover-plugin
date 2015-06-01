@@ -40,7 +40,6 @@ This `node_v1.0 (started) <<< >>>>>>> node_v1.1 (started)` bit in the middle is 
 
 ##Installation
 #####Install from CLI 
-This won't work until [this](https://github.com/cloudfoundry-incubator/cli-plugin-repo/pull/24) PR is merged into the CLI Plugin repo.
   ```
   $ cf add-plugin-repo CF-Community http://plugins.cloudfoundry.org/
   $ cf install-plugin scaleover -r CF-Community
