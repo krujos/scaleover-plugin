@@ -73,7 +73,12 @@ func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
 }
 
 func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
+	if args[0] == "scaleover" {
+		cmd.ScaleoverCommand(cliConnection, args)
+	}
+}
 
+func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
 	err := cmd.usage(args)
 	if nil != err {
 		fmt.Println(err)
