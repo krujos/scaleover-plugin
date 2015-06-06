@@ -187,7 +187,6 @@ var _ = Describe("Scaleover", func() {
 	})
 
 	Describe("Routes", func() {
-
 		BeforeEach(func() {
 			scaleoverCmdPlugin = &ScaleoverCmd{}
 			var app1 = &AppStatus{

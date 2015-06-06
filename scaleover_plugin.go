@@ -132,6 +132,7 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 		countRunning:   0,
 		countRequested: 0,
 		state:          "unknown",
+		routes:         []string{},
 	}
 
 	output, _ := cliConnection.CliCommandWithoutTerminalOutput("app", name)
