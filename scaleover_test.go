@@ -250,13 +250,13 @@ var _ = Describe("Scaleover", func() {
 		})
 
 		It("Should ignore routes if -f is in the args", func() {
-			scaleoverCmdPlugin.shouldIgnoreRoutes([]string{"scaleover", "two", "-f", "three", "1m"})
-			Expect(scaleoverCmdPlugin.ignoreRoutes).To(BeTrue())
+			ignoreRoutes := scaleoverCmdPlugin.shouldIgnoreRoutes([]string{"scaleover", "two", "-f", "three", "1m"})
+			Expect(ignoreRoutes).To(BeTrue())
 		})
 
 		It("Should carfuly consider routes if -f is not in the args", func() {
-			scaleoverCmdPlugin.shouldIgnoreRoutes([]string{"scaleover", "two", "three", "1m"})
-			Expect(scaleoverCmdPlugin.ignoreRoutes).To(BeFalse())
+			ignoreRoutes := scaleoverCmdPlugin.shouldIgnoreRoutes([]string{"scaleover", "two", "three", "1m"})
+			Expect(ignoreRoutes).To(BeFalse())
 		})
 
 	})
