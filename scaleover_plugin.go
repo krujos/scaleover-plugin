@@ -12,13 +12,16 @@ import (
 	"github.com/cloudfoundry/cli/plugin"
 )
 
+//AppStatus represents the sattus of a app in CF
 type AppStatus struct {
 	name           string
 	countRunning   int
 	countRequested int
 	state          string
+	routes         []string
 }
 
+//ScaleoverCmd is this plugin
 type ScaleoverCmd struct {
 	app1     AppStatus
 	app2     AppStatus
@@ -39,7 +42,7 @@ func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 				Name:     "scaleover",
 				HelpText: "Roll http traffic from one application to another",
 				UsageDetails: plugin.Usage{
-					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION",
+					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]",
 				},
 			},
 		},
@@ -51,10 +54,27 @@ func main() {
 }
 
 func (cmd *ScaleoverCmd) usage(args []string) error {
-	if 4 != len(args) {
-		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION")
+	badArgs := 4 != len(args)
+
+	if 5 == len(args) {
+		if "--no-route-check" == args[4] {
+			badArgs = false
+		}
+	}
+
+	if badArgs {
+		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]")
 	}
 	return nil
+}
+
+func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
+	for _, arg := range args {
+		if "--no-route-check" == arg {
+			return false
+		}
+	}
+	return true
 }
 
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
@@ -72,15 +92,18 @@ func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
 	return rolloverTime, nil
 }
 
+//Run runs the plugin
 func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
 	if args[0] == "scaleover" {
 		cmd.ScaleoverCommand(cliConnection, args)
 	}
 }
 
+//ScaleoverCommand creates a new instance of this plugin
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
-	err := cmd.usage(args)
-	if nil != err {
+	enforceRoutes := cmd.shouldEnforceRoutes(args)
+
+	if err := cmd.usage(args); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -92,22 +115,27 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	}
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
-	cmd.app1, err = cmd.getAppStatus(cliConnection, args[1])
-	if nil != err {
+	if cmd.app1, err = cmd.getAppStatus(cliConnection, args[1]); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
-	cmd.app2, err = cmd.getAppStatus(cliConnection, args[2])
-	if nil != err {
+	if cmd.app2, err = cmd.getAppStatus(cliConnection, args[2]); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+
+	if enforceRoutes {
+		if err = cmd.errorIfNoSharedRoute(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	cmd.showStatus()
 
 	count := cmd.app1.countRequested
-	if (count == 0) {
+	if count == 0 {
 		fmt.Println("There are no instances of the source app to scale over")
 		os.Exit(0)
 	}
@@ -131,6 +159,7 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 		countRunning:   0,
 		countRequested: 0,
 		state:          "unknown",
+		routes:         []string{},
 	}
 
 	output, _ := cliConnection.CliCommandWithoutTerminalOutput("app", name)
@@ -149,6 +178,10 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 			split := strings.Split(instances, "/")
 			status.countRunning, _ = strconv.Atoi(split[0])
 			status.countRequested, _ = strconv.Atoi(split[1])
+		}
+		if strings.HasPrefix(v, "urls: ") {
+			urls := strings.TrimPrefix(v, "urls: ")
+			status.routes = strings.Split(urls, ", ")
 		}
 	}
 	// Compensate for some CF weirdness that leaves the requested instances non-zero
@@ -200,4 +233,22 @@ func (cmd *ScaleoverCmd) showStatus() {
 			cmd.app2.countRequested,
 		)
 	}
+}
+
+func (cmd *ScaleoverCmd) appsShareARoute() bool {
+	for _, r1 := range cmd.app1.routes {
+		for _, r2 := range cmd.app2.routes {
+			if r1 == r2 {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (cmd *ScaleoverCmd) errorIfNoSharedRoute() error {
+	if cmd.appsShareARoute() {
+		return nil
+	}
+	return errors.New("Apps do not share a route!")
 }
