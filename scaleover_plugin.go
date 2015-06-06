@@ -152,6 +152,11 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 			status.countRunning, _ = strconv.Atoi(split[0])
 			status.countRequested, _ = strconv.Atoi(split[1])
 		}
+		if strings.HasPrefix(v, "urls: ") {
+			urls := strings.TrimPrefix(v, "urls: ")
+			status.routes = strings.Split(urls, ", ")
+
+		}
 	}
 	// Compensate for some CF weirdness that leaves the requested instances non-zero
 	// even though the app is stopped

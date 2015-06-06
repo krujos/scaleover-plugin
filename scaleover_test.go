@@ -74,12 +74,13 @@ var _ = Describe("Scaleover", func() {
 
 		It("should populate the routes for an app with one route", func() {
 
-			cfAppOutput := []string{"requested state: stopped", "instances: 0/10", "urls: shekel-dev.cfapps.io"}
+			cfAppOutput := []string{"requested state: stopped", "instances: 0/10", "urls: app.cfapps.io"}
 			fakeCliConnection.CliCommandWithoutTerminalOutputReturns(cfAppOutput, nil)
 
 			var status AppStatus
 			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
 			Expect(len(status.routes)).To(Equal(1))
+			Expect(status.routes[0]).To(Equal("app.cfapps.io"))
 		})
 
 	})
