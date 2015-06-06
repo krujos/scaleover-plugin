@@ -118,10 +118,16 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 		os.Exit(1)
 	}
 
-	cmd.app2, err = cmd.getAppStatus(cliConnection, args[2])
-	if nil != err {
+	if cmd.app2, err = cmd.getAppStatus(cliConnection, args[2]); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
+	}
+
+	if !cmd.shouldIgnoreRoutes(args) {
+		if err = cmd.errorIfNoSharedRoute(); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 
 	cmd.showStatus()
