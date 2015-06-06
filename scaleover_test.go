@@ -72,7 +72,7 @@ var _ = Describe("Scaleover", func() {
 			Expect(status.state).To(Equal("stopped"))
 		})
 
-		It("should populate the routes for an app with one route", func() {
+		It("should populate the routes for an app with one url", func() {
 
 			cfAppOutput := []string{"requested state: stopped", "instances: 0/10", "urls: app.cfapps.io"}
 			fakeCliConnection.CliCommandWithoutTerminalOutputReturns(cfAppOutput, nil)
@@ -81,6 +81,20 @@ var _ = Describe("Scaleover", func() {
 			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
 			Expect(len(status.routes)).To(Equal(1))
 			Expect(status.routes[0]).To(Equal("app.cfapps.io"))
+		})
+
+		It("should populate the routes for an app with three urls", func() {
+			cfAppOutput := []string{"requested state: stopped", "instances: 0/10",
+				"urls: app.cfapps.io, foo-app.cfapps.io, foo-app-b.cfapps.io"}
+
+			fakeCliConnection.CliCommandWithoutTerminalOutputReturns(cfAppOutput, nil)
+
+			var status AppStatus
+			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
+			Expect(len(status.routes)).To(Equal(3))
+			Expect(status.routes[0]).To(Equal("app.cfapps.io"))
+			Expect(status.routes[1]).To(Equal("foo-app.cfapps.io"))
+			Expect(status.routes[2]).To(Equal("foo-app-b.cfapps.io"))
 		})
 
 	})
