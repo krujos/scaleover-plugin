@@ -42,7 +42,7 @@ func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 				Name:     "scaleover",
 				HelpText: "Roll http traffic from one application to another",
 				UsageDetails: plugin.Usage{
-					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION",
+					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]",
 				},
 			},
 		},
@@ -57,20 +57,20 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 	badArgs := 4 != len(args)
 
 	if 5 == len(args) {
-		if "--no-route-checks" == args[4] {
+		if "--no-route-check" == args[4] {
 			badArgs = false
 		}
 	}
 
 	if badArgs {
-		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-checks]")
+		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]")
 	}
 	return nil
 }
 
 func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
 	for _, arg := range args {
-		if "--no-route-checks" == arg {
+		if "--no-route-check" == arg {
 			return false
 		}
 	}
@@ -103,8 +103,7 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
 	enforceRoutes := cmd.shouldEnforceRoutes(args)
 
-	err := cmd.usage(args)
-	if nil != err {
+	if err := cmd.usage(args); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
 	}
@@ -116,8 +115,7 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	}
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
-	cmd.app1, err = cmd.getAppStatus(cliConnection, args[1])
-	if nil != err {
+	if cmd.app1, err = cmd.getAppStatus(cliConnection, args[1]); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
 	}
