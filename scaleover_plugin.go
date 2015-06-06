@@ -57,10 +57,8 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 	badArgs := 4 != len(args)
 
 	if 5 == len(args) {
-		for _, arg := range args {
-			if "--no-route-checks" == arg {
-				badArgs = false
-			}
+		if "--no-route-checks" == args[4] {
+			badArgs = false
 		}
 	}
 

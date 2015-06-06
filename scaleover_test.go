@@ -208,12 +208,12 @@ var _ = Describe("Scaleover", func() {
 			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m"})).To(BeNil())
 		})
 
-		It("is just right with --no-route-checks", func() {
+		It("is okay with --no-route-checks at the end", func() {
 			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m", "--no-route-checks"})).To(BeNil())
 		})
 
-		It("is just right with --no-route-checks in an unusual position", func() {
-			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "--no-route-checks", "three", "1m"})).To(BeNil())
+		It("is gives usage with --no-route-checks in an unusual position", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "--no-route-checks", "three", "1m"})).ToNot(BeNil())
 		})
 
 	})
