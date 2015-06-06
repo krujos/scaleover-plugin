@@ -170,8 +170,8 @@ var _ = Describe("Scaleover", func() {
 	Describe("Usage", func() {
 		BeforeEach(func() {
 			scaleoverCmdPlugin = &ScaleoverCmd{}
-
 		})
+
 		It("shows usage for too few arguments", func() {
 			Expect(scaleoverCmdPlugin.usage([]string{"scaleover"})).NotTo(BeNil())
 		})
@@ -187,8 +187,15 @@ var _ = Describe("Scaleover", func() {
 	})
 
 	Describe("Routes", func() {
-		It("should warn if routes don't match", func() {
-			Fail("Not implemented")
+
+		BeforeEach(func() {
+			scaleoverCmdPlugin = &ScaleoverCmd{}
+		})
+
+		It("should return false if the apps don't share a route", func() {
+
+			sharedRoute := ScaleoverCmd.appsShareAroute()
+			Expect(sharedRoute).To(BeTrue())
 		})
 	})
 })

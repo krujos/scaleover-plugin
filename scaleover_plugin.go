@@ -202,3 +202,7 @@ func (cmd *ScaleoverCmd) showStatus() {
 		)
 	}
 }
+
+func (cmd *ScaleoverCmd) appsShareARoute() {
+
+}
