@@ -52,8 +52,18 @@ func main() {
 }
 
 func (cmd *ScaleoverCmd) usage(args []string) error {
-	if 4 != len(args) {
-		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION")
+	badArgs := 4 != len(args)
+
+	if 5 == len(args) {
+		for _, arg := range args {
+			if "-f" == arg {
+				badArgs = false
+			}
+		}
+	}
+
+	if badArgs {
+		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [-f]")
 	}
 	return nil
 }
