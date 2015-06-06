@@ -58,21 +58,21 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 
 	if 5 == len(args) {
 		for _, arg := range args {
-			if "-f" == arg {
+			if "--no-route-checks" == arg {
 				badArgs = false
 			}
 		}
 	}
 
 	if badArgs {
-		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [-f]")
+		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-checks]")
 	}
 	return nil
 }
 
 func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
 	for _, arg := range args {
-		if "-f" == arg {
+		if "--no-route-checks" == arg {
 			return false
 		}
 	}
@@ -104,6 +104,7 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 //ScaleoverCommand creates a new instance of this plugin
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
 	enforceRoutes := cmd.shouldEnforceRoutes(args)
+
 	err := cmd.usage(args)
 	if nil != err {
 		fmt.Println(err)

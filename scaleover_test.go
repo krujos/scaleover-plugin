@@ -208,12 +208,12 @@ var _ = Describe("Scaleover", func() {
 			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m"})).To(BeNil())
 		})
 
-		It("is just right with -f", func() {
-			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m", "-f"})).To(BeNil())
+		It("is just right with --no-route-checks", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m", "--no-route-checks"})).To(BeNil())
 		})
 
-		It("is just right with -f in an unusual position", func() {
-			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "-f", "three", "1m"})).To(BeNil())
+		It("is just right with --no-route-checks in an unusual position", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "--no-route-checks", "three", "1m"})).To(BeNil())
 		})
 
 	})
@@ -249,12 +249,12 @@ var _ = Describe("Scaleover", func() {
 			Expect(scaleoverCmdPlugin.errorIfNoSharedRoute()).To(BeNil())
 		})
 
-		It("Should ignore route sanity if -f is in the args", func() {
-			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "-f", "three", "1m"})
+		It("Should ignore route sanity if --no-route-checks is in the args", func() {
+			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "--no-route-checks", "three", "1m"})
 			Expect(enforceRoutes).To(BeFalse())
 		})
 
-		It("Should carfuly consider routes if -f is not in the args", func() {
+		It("Should carfuly consider routes if --no-route-checks is not in the args", func() {
 			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m"})
 			Expect(enforceRoutes).To(BeTrue())
 		})
