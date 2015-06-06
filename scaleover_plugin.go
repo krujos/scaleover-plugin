@@ -17,6 +17,7 @@ type AppStatus struct {
 	countRunning   int
 	countRequested int
 	state          string
+	routes         []string
 }
 
 type ScaleoverCmd struct {
@@ -107,7 +108,7 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	cmd.showStatus()
 
 	count := cmd.app1.countRequested
-	if (count == 0) {
+	if count == 0 {
 		fmt.Println("There are no instances of the source app to scale over")
 		os.Exit(0)
 	}
