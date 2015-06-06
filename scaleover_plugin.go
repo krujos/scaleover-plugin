@@ -12,6 +12,7 @@ import (
 	"github.com/cloudfoundry/cli/plugin"
 )
 
+//AppStatus represents the sattus of a app in CF
 type AppStatus struct {
 	name           string
 	countRunning   int
@@ -20,6 +21,7 @@ type AppStatus struct {
 	routes         []string
 }
 
+//ScaleoverCmd is this plugin
 type ScaleoverCmd struct {
 	app1     AppStatus
 	app2     AppStatus
@@ -68,13 +70,13 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 	return nil
 }
 
-func (cmd *ScaleoverCmd) shouldIgnoreRoutes(args []string) bool {
+func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
 	for _, arg := range args {
 		if "-f" == arg {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
@@ -92,13 +94,16 @@ func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
 	return rolloverTime, nil
 }
 
+//Run runs the plugin
 func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) {
 	if args[0] == "scaleover" {
 		cmd.ScaleoverCommand(cliConnection, args)
 	}
 }
 
+//ScaleoverCommand creates a new instance of this plugin
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
+	enforceRoutes := cmd.shouldEnforceRoutes(args)
 	err := cmd.usage(args)
 	if nil != err {
 		fmt.Println(err)
@@ -123,7 +128,7 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 		os.Exit(1)
 	}
 
-	if !cmd.shouldIgnoreRoutes(args) {
+	if enforceRoutes {
 		if err = cmd.errorIfNoSharedRoute(); err != nil {
 			fmt.Println(err)
 			os.Exit(1)

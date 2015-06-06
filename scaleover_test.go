@@ -249,14 +249,14 @@ var _ = Describe("Scaleover", func() {
 			Expect(scaleoverCmdPlugin.errorIfNoSharedRoute()).To(BeNil())
 		})
 
-		It("Should ignore routes if -f is in the args", func() {
-			ignoreRoutes := scaleoverCmdPlugin.shouldIgnoreRoutes([]string{"scaleover", "two", "-f", "three", "1m"})
-			Expect(ignoreRoutes).To(BeTrue())
+		It("Should ignore route sanity if -f is in the args", func() {
+			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "-f", "three", "1m"})
+			Expect(enforceRoutes).To(BeFalse())
 		})
 
 		It("Should carfuly consider routes if -f is not in the args", func() {
-			ignoreRoutes := scaleoverCmdPlugin.shouldIgnoreRoutes([]string{"scaleover", "two", "three", "1m"})
-			Expect(ignoreRoutes).To(BeFalse())
+			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m"})
+			Expect(enforceRoutes).To(BeTrue())
 		})
 
 	})
