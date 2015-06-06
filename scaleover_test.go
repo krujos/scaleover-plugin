@@ -71,7 +71,16 @@ var _ = Describe("Scaleover", func() {
 			Expect(status.countRunning).To(Equal(0))
 			Expect(status.state).To(Equal("stopped"))
 		})
-		///TODO It should give the usage for a bad # of params.
+
+		It("should populate the routes for an app with one route", func() {
+
+			cfAppOutput := []string{"requested state: stopped", "instances: 0/10", "urls: shekel-dev.cfapps.io"}
+			fakeCliConnection.CliCommandWithoutTerminalOutputReturns(cfAppOutput, nil)
+
+			var status AppStatus
+			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
+			Expect(len(status.routes)).To(Equal(1))
+		})
 
 	})
 
