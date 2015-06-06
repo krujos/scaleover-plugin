@@ -208,6 +208,14 @@ var _ = Describe("Scaleover", func() {
 			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m"})).To(BeNil())
 		})
 
+		It("is just right with -f", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m", "-f"})).To(BeNil())
+		})
+
+		It("is just right with -f in an unusual position", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "-f", "three", "1m"})).To(BeNil())
+		})
+
 	})
 
 	Describe("Routes", func() {
