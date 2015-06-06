@@ -71,7 +71,31 @@ var _ = Describe("Scaleover", func() {
 			Expect(status.countRunning).To(Equal(0))
 			Expect(status.state).To(Equal("stopped"))
 		})
-		///TODO It should give the usage for a bad # of params.
+
+		It("should populate the routes for an app with one url", func() {
+
+			cfAppOutput := []string{"requested state: stopped", "instances: 0/10", "urls: app.cfapps.io"}
+			fakeCliConnection.CliCommandWithoutTerminalOutputReturns(cfAppOutput, nil)
+
+			var status AppStatus
+			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
+			Expect(len(status.routes)).To(Equal(1))
+			Expect(status.routes[0]).To(Equal("app.cfapps.io"))
+		})
+
+		It("should populate the routes for an app with three urls", func() {
+			cfAppOutput := []string{"requested state: stopped", "instances: 0/10",
+				"urls: app.cfapps.io, foo-app.cfapps.io, foo-app-b.cfapps.io"}
+
+			fakeCliConnection.CliCommandWithoutTerminalOutputReturns(cfAppOutput, nil)
+
+			var status AppStatus
+			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
+			Expect(len(status.routes)).To(Equal(3))
+			Expect(status.routes[0]).To(Equal("app.cfapps.io"))
+			Expect(status.routes[1]).To(Equal("foo-app.cfapps.io"))
+			Expect(status.routes[2]).To(Equal("foo-app-b.cfapps.io"))
+		})
 
 	})
 
@@ -170,8 +194,8 @@ var _ = Describe("Scaleover", func() {
 	Describe("Usage", func() {
 		BeforeEach(func() {
 			scaleoverCmdPlugin = &ScaleoverCmd{}
-
 		})
+
 		It("shows usage for too few arguments", func() {
 			Expect(scaleoverCmdPlugin.usage([]string{"scaleover"})).NotTo(BeNil())
 		})
@@ -182,6 +206,57 @@ var _ = Describe("Scaleover", func() {
 
 		It("is just right", func() {
 			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m"})).To(BeNil())
+		})
+
+		It("is okay with --no-route-check at the end", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "three", "1m", "--no-route-check"})).To(BeNil())
+		})
+
+		It("is gives usage with --no-route-check in an unusual position", func() {
+			Expect(scaleoverCmdPlugin.usage([]string{"scaleover", "two", "--no-route-check", "three", "1m"})).ToNot(BeNil())
+		})
+
+	})
+
+	Describe("Routes", func() {
+		BeforeEach(func() {
+			scaleoverCmdPlugin = &ScaleoverCmd{}
+			var app1 = &AppStatus{
+				routes: []string{"a.b.c", "b.c.d"},
+			}
+			var app2 = &AppStatus{
+				routes: []string{"c.d.e", "d.e.f"},
+			}
+			scaleoverCmdPlugin.app1 = *app1
+			scaleoverCmdPlugin.app2 = *app2
+		})
+
+		It("should return false if the apps don't share a route", func() {
+			Expect(scaleoverCmdPlugin.appsShareARoute()).To(BeFalse())
+		})
+
+		It("should return true when they share a route", func() {
+			scaleoverCmdPlugin.app2 = scaleoverCmdPlugin.app1
+			Expect(scaleoverCmdPlugin.appsShareARoute()).To(BeTrue())
+		})
+
+		It("Should warn when apps don't share a route", func() {
+			Expect(scaleoverCmdPlugin.errorIfNoSharedRoute().Error()).To(Equal("Apps do not share a route!"))
+		})
+
+		It("Should be just fine if apps share a route", func() {
+			scaleoverCmdPlugin.app2.routes = append(scaleoverCmdPlugin.app2.routes, "a.b.c")
+			Expect(scaleoverCmdPlugin.errorIfNoSharedRoute()).To(BeNil())
+		})
+
+		It("Should ignore route sanity if --no-route-check is at the end of args", func() {
+			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
+			Expect(enforceRoutes).To(BeFalse())
+		})
+
+		It("Should carfuly consider routes if --no-route-check is not in the args", func() {
+			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m"})
+			Expect(enforceRoutes).To(BeTrue())
 		})
 
 	})
