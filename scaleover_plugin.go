@@ -203,6 +203,13 @@ func (cmd *ScaleoverCmd) showStatus() {
 	}
 }
 
-func (cmd *ScaleoverCmd) appsShareARoute() {
-
+func (cmd *ScaleoverCmd) appsShareARoute() bool {
+	for _, r1 := range cmd.app1.routes {
+		for _, r2 := range cmd.app2.routes {
+			if r1 == r2 {
+				return true
+			}
+		}
+	}
+	return false
 }

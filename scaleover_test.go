@@ -190,12 +190,23 @@ var _ = Describe("Scaleover", func() {
 
 		BeforeEach(func() {
 			scaleoverCmdPlugin = &ScaleoverCmd{}
+			var app1 = &AppStatus{
+				routes: []string{"a.b.c", "b.c.d"},
+			}
+			var app2 = &AppStatus{
+				routes: []string{"c.d.e", "d.e.f"},
+			}
+			scaleoverCmdPlugin.app1 = *app1
+			scaleoverCmdPlugin.app2 = *app2
 		})
 
 		It("should return false if the apps don't share a route", func() {
+			Expect(scaleoverCmdPlugin.appsShareARoute()).To(BeFalse())
+		})
 
-			sharedRoute := ScaleoverCmd.appsShareAroute()
-			Expect(sharedRoute).To(BeTrue())
+		It("should return true when they share a route", func() {
+			scaleoverCmdPlugin.app2 = scaleoverCmdPlugin.app1
+			Expect(scaleoverCmdPlugin.appsShareARoute()).To(BeTrue())
 		})
 	})
 })
