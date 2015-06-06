@@ -21,9 +21,10 @@ type AppStatus struct {
 }
 
 type ScaleoverCmd struct {
-	app1     AppStatus
-	app2     AppStatus
-	maxcount int
+	app1         AppStatus
+	app2         AppStatus
+	maxcount     int
+	ignoreRoutes bool
 }
 
 //GetMetadata returns metatada
@@ -66,6 +67,15 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [-f]")
 	}
 	return nil
+}
+
+func (cmd *ScaleoverCmd) shouldIgnoreRoutes(args []string) {
+	for _, arg := range args {
+		if "-f" == arg {
+			cmd.ignoreRoutes = true
+			return
+		}
+	}
 }
 
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
