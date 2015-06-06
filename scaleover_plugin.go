@@ -218,3 +218,10 @@ func (cmd *ScaleoverCmd) appsShareARoute() bool {
 	}
 	return false
 }
+
+func (cmd *ScaleoverCmd) errorIfNoSharedRoute() error {
+	if cmd.appsShareARoute() {
+		return nil
+	}
+	return errors.New("Apps do not share a route!")
+}

@@ -231,5 +231,15 @@ var _ = Describe("Scaleover", func() {
 			scaleoverCmdPlugin.app2 = scaleoverCmdPlugin.app1
 			Expect(scaleoverCmdPlugin.appsShareARoute()).To(BeTrue())
 		})
+
+		It("Should warn when apps don't share a route", func() {
+			Expect(scaleoverCmdPlugin.errorIfNoSharedRoute().Error()).To(Equal("Apps do not share a route!"))
+		})
+
+		It("Should be just fine if apps share a route", func() {
+			scaleoverCmdPlugin.app2.routes = append(scaleoverCmdPlugin.app2.routes, "a.b.c")
+			Expect(scaleoverCmdPlugin.errorIfNoSharedRoute()).To(BeNil())
+		})
+
 	})
 })
