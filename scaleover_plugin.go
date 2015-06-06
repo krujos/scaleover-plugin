@@ -155,7 +155,6 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 		if strings.HasPrefix(v, "urls: ") {
 			urls := strings.TrimPrefix(v, "urls: ")
 			status.routes = strings.Split(urls, ", ")
-
 		}
 	}
 	// Compensate for some CF weirdness that leaves the requested instances non-zero
