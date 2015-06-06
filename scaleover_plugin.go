@@ -69,12 +69,7 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 }
 
 func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
-	for _, arg := range args {
-		if "--no-route-check" == arg {
-			return false
-		}
-	}
-	return true
+	return !("--no-route-check" == args[len(args)-1])
 }
 
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {

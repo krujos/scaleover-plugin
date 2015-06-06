@@ -249,8 +249,8 @@ var _ = Describe("Scaleover", func() {
 			Expect(scaleoverCmdPlugin.errorIfNoSharedRoute()).To(BeNil())
 		})
 
-		It("Should ignore route sanity if --no-route-check is in the args", func() {
-			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "--no-route-check", "three", "1m"})
+		It("Should ignore route sanity if --no-route-check is at the end of args", func() {
+			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
 			Expect(enforceRoutes).To(BeFalse())
 		})
 
