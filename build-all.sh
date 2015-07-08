@@ -16,7 +16,6 @@ if [[ "$1" = "release" ]] ; then
 		`sed -i .bak -e "s/Major:.*/Major: $MAJOR,/" \
 			-e "s/Minor:.*/Minor: $MINOR,/" \
 			-e "s/Build:.*/Build: $BUILD,/" scaleover_plugin.go`
-		exit 1
 	fi
 fi
 
