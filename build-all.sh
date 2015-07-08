@@ -13,7 +13,7 @@ if [[ "$1" = "release" ]] ; then
 		MINOR=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $2;}'`
 		BUILD=`echo $TAG |  awk 'BEGIN {FS = "." } ; { printf $3;}'`
 
-		`sed -i .bak -e "s/Major:.*/Major: $MAJOR,/" \
+		`sed -i -e "s/Major:.*/Major: $MAJOR,/" \
 			-e "s/Minor:.*/Minor: $MINOR,/" \
 			-e "s/Build:.*/Build: $BUILD,/" scaleover_plugin.go`
 	fi
