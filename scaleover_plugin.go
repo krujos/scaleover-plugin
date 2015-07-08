@@ -35,7 +35,7 @@ func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 		Version: plugin.VersionType{
 			Major: 1,
 			Minor: 0,
-			Build: 2,
+			Build: 4,
 		},
 		Commands: []plugin.Command{
 			{
