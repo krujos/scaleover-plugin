@@ -23,8 +23,8 @@ type AppStatus struct {
 
 //ScaleoverCmd is this plugin
 type ScaleoverCmd struct {
-	app1     AppStatus
-	app2     AppStatus
+	app1     *AppStatus
+	app2     *AppStatus
 	maxcount int
 }
 
@@ -148,45 +148,26 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	fmt.Println()
 }
 
-func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name string) (AppStatus, error) {
-	status := AppStatus{
+func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name string) (*AppStatus, error) {
+	app, err := cliConnection.GetApp(name)
+	if nil != err {
+		return nil, err
+	}
+
+	status := &AppStatus{
 		name:           name,
 		countRunning:   0,
 		countRequested: 0,
 		state:          "unknown",
-		routes:         []string{},
+		routes:         make([]string, len(app.Routes)),
 	}
 
-	_, err := cliConnection.GetApp(name)
-
-	if nil != err {
-		return status, err
+	status.state = app.State
+	status.countRequested = app.InstanceCount
+	status.countRunning = app.RunningInstances
+	for idx, route := range app.Routes {
+		status.routes[idx] = route.Host + "." + route.Domain.Name
 	}
-	// for idx, v := range output {
-	// 	v = strings.TrimSpace(v)
-	// 	if strings.HasPrefix(v, "FAILED") {
-	// 		e := output[idx+1]
-	// 		return status, errors.New(e)
-	// 	}
-	// 	if strings.HasPrefix(v, "requested state: ") {
-	// 		status.state = strings.TrimPrefix(v, "requested state: ")
-	// 	}
-	// 	if strings.HasPrefix(v, "instances: ") {
-	// 		instances := strings.TrimPrefix(v, "instances: ")
-	// 		split := strings.Split(instances, "/")
-	// 		status.countRunning, _ = strconv.Atoi(split[0])
-	// 		status.countRequested, _ = strconv.Atoi(split[1])
-	// 	}
-	// 	if strings.HasPrefix(v, "urls: ") {
-	// 		urls := strings.TrimPrefix(v, "urls: ")
-	// 		status.routes = strings.Split(urls, ", ")
-	// 	}
-	// }
-	// // Compensate for some CF weirdness that leaves the requested instances non-zero
-	// // even though the app is stopped
-	// if "stopped" == status.state {
-	// 	status.countRequested = 0
-	// }
 	return status, nil
 }
 
