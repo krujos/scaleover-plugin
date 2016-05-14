@@ -163,7 +163,7 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 	}
 
 	status.state = app.State
-	status.countRequested = app.InstanceCount
+	status.countRequested = app.RunningInstances
 	status.countRunning = app.RunningInstances
 	for idx, route := range app.Routes {
 		status.routes[idx] = route.Host + "." + route.Domain.Name
