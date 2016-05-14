@@ -157,33 +157,36 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 		routes:         []string{},
 	}
 
-	output, _ := cliConnection.CliCommandWithoutTerminalOutput("app", name)
+	_, err := cliConnection.GetApp(name)
 
-	for idx, v := range output {
-		v = strings.TrimSpace(v)
-		if strings.HasPrefix(v, "FAILED") {
-			e := output[idx+1]
-			return status, errors.New(e)
-		}
-		if strings.HasPrefix(v, "requested state: ") {
-			status.state = strings.TrimPrefix(v, "requested state: ")
-		}
-		if strings.HasPrefix(v, "instances: ") {
-			instances := strings.TrimPrefix(v, "instances: ")
-			split := strings.Split(instances, "/")
-			status.countRunning, _ = strconv.Atoi(split[0])
-			status.countRequested, _ = strconv.Atoi(split[1])
-		}
-		if strings.HasPrefix(v, "urls: ") {
-			urls := strings.TrimPrefix(v, "urls: ")
-			status.routes = strings.Split(urls, ", ")
-		}
+	if nil != err {
+		return status, err
 	}
-	// Compensate for some CF weirdness that leaves the requested instances non-zero
-	// even though the app is stopped
-	if "stopped" == status.state {
-		status.countRequested = 0
-	}
+	// for idx, v := range output {
+	// 	v = strings.TrimSpace(v)
+	// 	if strings.HasPrefix(v, "FAILED") {
+	// 		e := output[idx+1]
+	// 		return status, errors.New(e)
+	// 	}
+	// 	if strings.HasPrefix(v, "requested state: ") {
+	// 		status.state = strings.TrimPrefix(v, "requested state: ")
+	// 	}
+	// 	if strings.HasPrefix(v, "instances: ") {
+	// 		instances := strings.TrimPrefix(v, "instances: ")
+	// 		split := strings.Split(instances, "/")
+	// 		status.countRunning, _ = strconv.Atoi(split[0])
+	// 		status.countRequested, _ = strconv.Atoi(split[1])
+	// 	}
+	// 	if strings.HasPrefix(v, "urls: ") {
+	// 		urls := strings.TrimPrefix(v, "urls: ")
+	// 		status.routes = strings.Split(urls, ", ")
+	// 	}
+	// }
+	// // Compensate for some CF weirdness that leaves the requested instances non-zero
+	// // even though the app is stopped
+	// if "stopped" == status.state {
+	// 	status.countRequested = 0
+	// }
 	return status, nil
 }
 
