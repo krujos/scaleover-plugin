@@ -58,7 +58,7 @@ var _ = Describe("Scaleover", func() {
 			Expect(status.countRunning).To(Equal(10))
 		})
 
-		It("should keep a stop app stopped with 10 instances", func() {
+		It("should keep a stoped app stopped with 10 instances", func() {
 
 			app := plugin_models.GetAppModel{
 				InstanceCount:    10,
@@ -70,9 +70,22 @@ var _ = Describe("Scaleover", func() {
 			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
 
 			Expect(status.name).To(Equal("app1"))
-			Expect(status.countRequested).To(Equal(10))
+			Expect(status.countRequested).To(Equal(0))
 			Expect(status.countRunning).To(Equal(0))
 			Expect(status.state).To(Equal("stopped"))
+		})
+
+		It("should report zero requested instances for a stopped app", func() {
+			app := plugin_models.GetAppModel{
+				InstanceCount:    10,
+				RunningInstances: 10,
+				State:            "stopped",
+			}
+
+			fakeCliConnection.GetAppReturns(app, nil)
+
+			status, _ = scaleoverCmdPlugin.getAppStatus(fakeCliConnection, "app1")
+			Ω(status.countRequested).To(Equal(0))
 		})
 
 		It("should populate the routes for an app with one url", func() {
@@ -277,6 +290,27 @@ var _ = Describe("Scaleover", func() {
 		It("Should carfuly consider routes if --no-route-check is not in the args", func() {
 			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m"})
 			Expect(enforceRoutes).To(BeTrue())
+		})
+	})
+
+	Describe("Do Scaleover", func() {
+		BeforeEach(func() {
+			scaleoverCmdPlugin = &ScaleoverCmd{}
+			var app1 = &AppStatus{
+				countRunning:   10,
+				countRequested: 10,
+			}
+			var app2 = &AppStatus{
+				countRunning:   0,
+				countRequested: 0,
+			}
+			scaleoverCmdPlugin.app1 = app1
+			scaleoverCmdPlugin.app2 = app2
+		})
+
+		It("should scale app2 to 10", func() {
+			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 0)
+			Ω(scaleoverCmdPlugin.app2.countRequested).To(Equal(10))
 		})
 	})
 })

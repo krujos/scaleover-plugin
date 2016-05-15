@@ -136,6 +136,12 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	}
 	sleepInterval := time.Duration(rolloverTime.Nanoseconds() / int64(count))
 
+	cmd.doScaleover(cliConnection, count, sleepInterval)
+	fmt.Println()
+}
+
+func (cmd *ScaleoverCmd) doScaleover(cliConnection plugin.CliConnection,
+	count int, sleepInterval time.Duration) {
 	for count > 0 {
 		count--
 		cmd.app2.scaleUp(cliConnection)
@@ -145,9 +151,7 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 			time.Sleep(sleepInterval)
 		}
 	}
-	fmt.Println()
 }
-
 func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name string) (*AppStatus, error) {
 	app, err := cliConnection.GetApp(name)
 	if nil != err {
@@ -163,7 +167,9 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 	}
 
 	status.state = app.State
-	status.countRequested = app.InstanceCount
+	if app.State != "stopped" {
+		status.countRequested = app.InstanceCount
+	}
 	status.countRunning = app.RunningInstances
 	for idx, route := range app.Routes {
 		status.routes[idx] = route.Host + "." + route.Domain.Name
