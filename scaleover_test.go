@@ -71,7 +71,7 @@ var _ = Describe("Scaleover", func() {
 
 			Expect(status.name).To(Equal("app1"))
 			Expect(status.countRequested).To(Equal(10))
-			Expect(status.countRunning).To(Equal(10))
+			Expect(status.countRunning).To(Equal(0))
 			Expect(status.state).To(Equal("stopped"))
 		})
 
