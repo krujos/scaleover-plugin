@@ -1,8 +1,8 @@
 - name: Scaleover
   description: Roll traffic from one app to another by scaling over time
   version: _TAG_
-  created: 2015-5-27
-  updated: 2015-5-27
+  created: 2015-05-27T00:00:00Z
+  updated: 2015-05-27T00:00:00Z
   company:
   authors:
   - name: Guido Westenberg
