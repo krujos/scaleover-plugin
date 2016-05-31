@@ -54,10 +54,12 @@ func main() {
 }
 
 func (cmd *ScaleoverCmd) usage(args []string) error {
+	return nil 
+	/*
 	badArgs := 4 != len(args)
 
-	if 5 == len(args) {
-		if "--no-route-check" == args[4] {
+	if 5 >= len(args) {
+		if "--no-route-check" == args[len(args)-1] {
 			badArgs = false
 		}
 	}
@@ -66,6 +68,7 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]")
 	}
 	return nil
+	*/
 }
 
 func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
@@ -97,6 +100,17 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 //ScaleoverCommand creates a new instance of this plugin
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
 	enforceRoutes := cmd.shouldEnforceRoutes(args)
+	leave := 0
+
+	for i := 4; i < len(args); i++ {
+		if args[i] == "--leave" && len(args) >= i + 1 {
+			_leave, err := strconv.Atoi(args[i + 1])
+			
+			if err == nil {
+				leave = _leave
+			}
+		}
+	} 
 
 	if err := cmd.usage(args); nil != err {
 		fmt.Println(err)
@@ -136,18 +150,23 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	}
 	sleepInterval := time.Duration(rolloverTime.Nanoseconds() / int64(count))
 
-	cmd.doScaleover(cliConnection, count, 0, sleepInterval)
+	cmd.doScaleover(cliConnection, count, leave, sleepInterval)
 	fmt.Println()
 }
 
 func (cmd *ScaleoverCmd) doScaleover(cliConnection plugin.CliConnection,
 	count int, leave int, sleepInterval time.Duration) {
+	count -= cmd.app2.countRunning
+	leave -= cmd.app2.countRunning
+
 	for count > 0 {
-		count--
 		cmd.app2.scaleUp(cliConnection)
 		if count > leave {
 			cmd.app1.scaleDown(cliConnection)
+		} else {
+			fmt.Printf("Leaving ")
 		}
+		count--		
 		cmd.showStatus()
 		if count > 0 {
 			time.Sleep(sleepInterval)
