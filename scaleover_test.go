@@ -309,8 +309,8 @@ var _ = Describe("Scaleover", func() {
 		})
 
 		It("should scale app2 to 10", func() {
-			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 0)
+			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 0, 0)
 			Ω(scaleoverCmdPlugin.app2.countRequested).To(Equal(10))
-		})
+		})		
 	})
 })

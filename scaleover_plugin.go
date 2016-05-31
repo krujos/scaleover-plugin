@@ -25,7 +25,7 @@ type AppStatus struct {
 type ScaleoverCmd struct {
 	app1     *AppStatus
 	app2     *AppStatus
-	maxcount int
+	maxcount int 
 }
 
 //GetMetadata returns metatada
@@ -136,16 +136,18 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	}
 	sleepInterval := time.Duration(rolloverTime.Nanoseconds() / int64(count))
 
-	cmd.doScaleover(cliConnection, count, sleepInterval)
+	cmd.doScaleover(cliConnection, count, 0, sleepInterval)
 	fmt.Println()
 }
 
 func (cmd *ScaleoverCmd) doScaleover(cliConnection plugin.CliConnection,
-	count int, sleepInterval time.Duration) {
+	count int, leave int, sleepInterval time.Duration) {
 	for count > 0 {
 		count--
 		cmd.app2.scaleUp(cliConnection)
-		cmd.app1.scaleDown(cliConnection)
+		if count > leave {
+			cmd.app1.scaleDown(cliConnection)
+		}
 		cmd.showStatus()
 		if count > 0 {
 			time.Sleep(sleepInterval)
@@ -190,6 +192,7 @@ func (app *AppStatus) scaleUp(cliConnection plugin.CliConnection) {
 func (app *AppStatus) scaleDown(cliConnection plugin.CliConnection) {
 	app.countRequested--
 	// If going to zero, stop the app
+	
 	if app.countRequested == 0 {
 		cliConnection.CliCommandWithoutTerminalOutput("stop", app.name)
 		app.state = "stopped"
