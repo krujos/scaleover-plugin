@@ -56,7 +56,7 @@ func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 				Name:     "scaleover",
 				HelpText: "Roll http traffic from one application to another",
 				UsageDetails: plugin.Usage{
-					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]",
+					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check] [--leave N]",
 				},
 			},
 		},
@@ -68,21 +68,27 @@ func main() {
 }
 
 func (cmd *ScaleoverCmd) usage(args []string) error {
-	return nil 
-	/*
 	badArgs := 4 != len(args)
 
-	if 5 >= len(args) {
-		if "--no-route-check" == args[len(args)-1] {
-			badArgs = false
+	for i := 4; i < len(args); i++ {
+		fmt.Println(args[i])
+		
+		switch args[i] {
+			case "--no-route-check":
+				badArgs = false
+			case "--leave":
+				if i < len(args) -1 {
+					_, err := strconv.Atoi(args[i + 1])
+					badArgs = err != nil
+				}
 		}
 	}
 
 	if badArgs {
-		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]")
+		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check] [--leave N]")
 	}
+	
 	return nil
-	*/
 }
 
 func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
