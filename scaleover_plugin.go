@@ -131,16 +131,6 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
 	enforceRoutes, leave := cmd.checkArgs(args)
 
-	for i := 4; i < len(args); i++ {
-		if args[i] == "--leave" && len(args) >= i + 1 {
-			_leave, err := strconv.Atoi(args[i + 1])
-			
-			if err == nil {
-				leave = _leave
-			}
-		}
-	} 
-
 	if err := cmd.usage(args); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
