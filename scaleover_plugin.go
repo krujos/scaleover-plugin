@@ -91,7 +91,7 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 	return nil
 }
 
-func (cmd *ScaleoverCmd) checkArgs(args []string) (bool, int) {
+func (cmd *ScaleoverCmd) parseArgs(args []string) (bool, int) {
 	enforceRoutes := true
 	leave := 0
 	 
@@ -129,8 +129,6 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 
 //ScaleoverCommand creates a new instance of this plugin
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
-	enforceRoutes, leave := cmd.checkArgs(args)
-
 	if err := cmd.usage(args); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
@@ -141,6 +139,8 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	enforceRoutes, leave := cmd.parseArgs(args)
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
 	if cmd.app1, err = cmd.getAppStatus(cliConnection, args[1]); nil != err {

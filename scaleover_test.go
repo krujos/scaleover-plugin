@@ -308,12 +308,12 @@ var _ = Describe("Scaleover", func() {
 		})
 
 		It("Should ignore route sanity if --no-route-check is at the end of args", func() {
-			enforceRoutes, _ := scaleoverCmdPlugin.checkArgs([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
+			enforceRoutes, _ := scaleoverCmdPlugin.parseArgs([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
 			Expect(enforceRoutes).To(BeFalse())
 		})
 
 		It("Should carfuly consider routes if --no-route-check is not in the args", func() {
-			enforceRoutes, _ := scaleoverCmdPlugin.checkArgs([]string{"scaleover", "two", "three", "1m"})
+			enforceRoutes, _ := scaleoverCmdPlugin.parseArgs([]string{"scaleover", "two", "three", "1m"})
 			Expect(enforceRoutes).To(BeTrue())
 		})
 	})
