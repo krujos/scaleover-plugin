@@ -91,8 +91,18 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 	return nil
 }
 
-func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
-	return "--no-route-check" != args[len(args)-1]
+func (cmd *ScaleoverCmd) checkArgs(args []string) (bool, int) {
+	enforceRoutes := true
+	leave := 0
+	 
+	for i := 4; i < len(args); i++ {
+		switch(args[i]) {
+			case "--no-route-check":
+				enforceRoutes = false
+		}
+	}
+	
+	return enforceRoutes, leave
 }
 
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
@@ -119,8 +129,7 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 
 //ScaleoverCommand creates a new instance of this plugin
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
-	enforceRoutes := cmd.shouldEnforceRoutes(args)
-	leave := 0
+	enforceRoutes, leave := cmd.checkArgs(args)
 
 	for i := 4; i < len(args); i++ {
 		if args[i] == "--leave" && len(args) >= i + 1 {

@@ -308,12 +308,12 @@ var _ = Describe("Scaleover", func() {
 		})
 
 		It("Should ignore route sanity if --no-route-check is at the end of args", func() {
-			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
+			enforceRoutes, _ := scaleoverCmdPlugin.checkArgs([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
 			Expect(enforceRoutes).To(BeFalse())
 		})
 
 		It("Should carfuly consider routes if --no-route-check is not in the args", func() {
-			enforceRoutes := scaleoverCmdPlugin.shouldEnforceRoutes([]string{"scaleover", "two", "three", "1m"})
+			enforceRoutes, _ := scaleoverCmdPlugin.checkArgs([]string{"scaleover", "two", "three", "1m"})
 			Expect(enforceRoutes).To(BeTrue())
 		})
 	})
@@ -336,6 +336,13 @@ var _ = Describe("Scaleover", func() {
 		It("should scale app2 to 10", func() {
 			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 0, 0)
 			Ω(scaleoverCmdPlugin.app2.countRequested).To(Equal(10))
+			Ω(scaleoverCmdPlugin.app1.countRequested).To(Equal(0))			
 		})		
+		
+		It("should scale app2 to 10 and app1 down to N if a <leave N> is specified", func() {
+			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 1, 0)
+			Ω(scaleoverCmdPlugin.app2.countRequested).To(Equal(10))
+			Ω(scaleoverCmdPlugin.app1.countRequested).To(Equal(1))			
+		})				
 	})
 })
