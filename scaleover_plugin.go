@@ -39,7 +39,7 @@ type AppStatus struct {
 type ScaleoverCmd struct {
 	app1     *AppStatus
 	app2     *AppStatus
-	maxcount int
+	maxcount int 
 }
 
 //GetMetadata returns metatada
@@ -56,7 +56,7 @@ func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 				Name:     "scaleover",
 				HelpText: "Roll http traffic from one application to another",
 				UsageDetails: plugin.Usage{
-					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]",
+					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check] [--leave N]",
 				},
 			},
 		},
@@ -70,20 +70,39 @@ func main() {
 func (cmd *ScaleoverCmd) usage(args []string) error {
 	badArgs := 4 != len(args)
 
-	if 5 == len(args) {
-		if "--no-route-check" == args[4] {
-			badArgs = false
+	for i := 4; i < len(args); i++ {
+		fmt.Println(args[i])
+		
+		switch args[i] {
+			case "--no-route-check":
+				badArgs = false
+			case "--leave":
+				if i < len(args) -1 {
+					_, err := strconv.Atoi(args[i + 1])
+					badArgs = err != nil
+				}
 		}
 	}
 
 	if badArgs {
-		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check]")
+		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check] [--leave N]")
 	}
+	
 	return nil
 }
 
-func (cmd *ScaleoverCmd) shouldEnforceRoutes(args []string) bool {
-	return "--no-route-check" != args[len(args)-1]
+func (cmd *ScaleoverCmd) parseArgs(args []string) (bool, int) {
+	enforceRoutes := true
+	leave := 0
+	 
+	for i := 4; i < len(args); i++ {
+		switch(args[i]) {
+			case "--no-route-check":
+				enforceRoutes = false
+		}
+	}
+	
+	return enforceRoutes, leave
 }
 
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
@@ -110,8 +129,6 @@ func (cmd *ScaleoverCmd) Run(cliConnection plugin.CliConnection, args []string) 
 
 //ScaleoverCommand creates a new instance of this plugin
 func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, args []string) {
-	enforceRoutes := cmd.shouldEnforceRoutes(args)
-
 	if err := cmd.usage(args); nil != err {
 		fmt.Println(err)
 		os.Exit(1)
@@ -122,6 +139,8 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	enforceRoutes, leave := cmd.parseArgs(args)
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
 	if cmd.app1, err = cmd.getAppStatus(cliConnection, args[1]); nil != err {
@@ -150,16 +169,23 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 	}
 	sleepInterval := time.Duration(rolloverTime.Nanoseconds() / int64(count))
 
-	cmd.doScaleover(cliConnection, count, sleepInterval)
+	cmd.doScaleover(cliConnection, count, leave, sleepInterval)
 	fmt.Println()
 }
 
 func (cmd *ScaleoverCmd) doScaleover(cliConnection plugin.CliConnection,
-	count int, sleepInterval time.Duration) {
+	count int, leave int, sleepInterval time.Duration) {
+	count -= cmd.app2.countRunning
+	leave -= cmd.app2.countRunning
+
 	for count > 0 {
-		count--
 		cmd.app2.scaleUp(cliConnection)
-		cmd.app1.scaleDown(cliConnection)
+		if count > leave {
+			cmd.app1.scaleDown(cliConnection)
+		} else {
+			fmt.Printf("Leaving ")
+		}
+		count--		
 		cmd.showStatus()
 		if count > 0 {
 			time.Sleep(sleepInterval)
@@ -204,6 +230,7 @@ func (app *AppStatus) scaleUp(cliConnection plugin.CliConnection) {
 func (app *AppStatus) scaleDown(cliConnection plugin.CliConnection) {
 	app.countRequested--
 	// If going to zero, stop the app
+	
 	if app.countRequested == 0 {
 		cliConnection.CliCommandWithoutTerminalOutput("stop", app.name)
 		app.state = "stopped"
