@@ -78,8 +78,6 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
   badArgs := 4 != len(args)
 
 	for i := 4; i < len(args); i++ {
-		fmt.Println(args[i])
-
 		switch args[i] {
 			case "--no-route-check":
 				badArgs = false
@@ -95,7 +93,7 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 				}
       case "--post-start-sleep":
 				if i < len(args) -1 {
-          badArgs = args[i + 1] == ""          
+          badArgs = args[i + 1] == ""
 				}
 		}
 	}
