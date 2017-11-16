@@ -39,7 +39,7 @@ type AppStatus struct {
 type ScaleoverCmd struct {
 	app1     *AppStatus
 	app2     *AppStatus
-	maxcount int 
+	maxcount int
 }
 
 //GetMetadata returns metatada
@@ -48,15 +48,22 @@ func (cmd *ScaleoverCmd) GetMetadata() plugin.PluginMetadata {
 		Name: "scaleover",
 		Version: plugin.VersionType{
 			Major: 1,
-			Minor: 0,
-			Build: 4,
+			Minor: 1,
+			Build: 0,
 		},
 		Commands: []plugin.Command{
 			{
 				Name:     "scaleover",
-				HelpText: "Roll http traffic from one application to another",
+				HelpText: "Roll traffic from one application to another",
 				UsageDetails: plugin.Usage{
-					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check] [--leave N]",
+					Usage: "cf scaleover APP1 APP2 ROLLOVER_DURATION",
+          Options: map[string]string{
+						"-no-route-check":   "Since both apps are live at the same time, there is assumed use of a shared route (default true)",
+						"-wait-for-start":   "Should scaleover wait for confirmation that the scaled up instace(s) are 'started' before scaling down? (default false)",
+            "-post-start-sleep": "How long should scaleover wait after the new instances are considered 'started' for the app itself to initialize/bootstrap. Supports standard duration strings (eg '10s', '1m', etc). Used ONLY in conjunction with `--wait-for-start`. (default 0)",
+            "-leave":            "How many 'blue' instances should remain running when using scaleover to 'green'? (default 1/stopped)",
+            "-batch-size":       "How many instances should be scaled (both up/down) at a time? (default 1)",
+					},
 				},
 			},
 		},
@@ -68,11 +75,9 @@ func main() {
 }
 
 func (cmd *ScaleoverCmd) usage(args []string) error {
-	badArgs := 4 != len(args)
+  badArgs := 4 != len(args)
 
 	for i := 4; i < len(args); i++ {
-		fmt.Println(args[i])
-		
 		switch args[i] {
 			case "--no-route-check":
 				badArgs = false
@@ -81,28 +86,60 @@ func (cmd *ScaleoverCmd) usage(args []string) error {
 					_, err := strconv.Atoi(args[i + 1])
 					badArgs = err != nil
 				}
+      case "--batch-size":
+				if i < len(args) -1 {
+					_, err := strconv.Atoi(args[i + 1])
+          badArgs = err != nil
+				}
+      case "--post-start-sleep":
+				if i < len(args) -1 {
+          badArgs = args[i + 1] == ""
+				}
 		}
 	}
 
 	if badArgs {
 		return errors.New("Usage: cf scaleover\n\tcf scaleover APP1 APP2 ROLLOVER_DURATION [--no-route-check] [--leave N]")
 	}
-	
+
 	return nil
 }
 
-func (cmd *ScaleoverCmd) parseArgs(args []string) (bool, int) {
+func (cmd *ScaleoverCmd) parseArgs(args []string) (bool, int, bool, time.Duration, int) {
 	enforceRoutes := true
+  waitForStarted := false
+  batchSize :=1
 	leave := 0
-	 
+  var postStartSleep time.Duration
+  var err error
+
 	for i := 4; i < len(args); i++ {
 		switch(args[i]) {
 			case "--no-route-check":
 				enforceRoutes = false
+      case "--wait-for-start":
+				waitForStarted = true
+      case "--leave":
+				if i < len(args) -1 {
+          leave, err = strconv.Atoi(args[i + 1])
+				}
+      case "--batch-size":
+				if i < len(args) -1 {
+          batchSize, err = strconv.Atoi(args[i + 1])
+				}
+      case "--post-start-sleep":
+				if i < len(args) -1 {
+          postStartSleep, err = cmd.parseTime(args[i + 1])
+				}
 		}
 	}
-	
-	return enforceRoutes, leave
+
+  if err == nil {
+		return enforceRoutes, leave, waitForStarted, postStartSleep, batchSize
+	}
+
+  //defaults on error
+  return enforceRoutes, 0, waitForStarted, postStartSleep, 1
 }
 
 func (cmd *ScaleoverCmd) parseTime(duration string) (time.Duration, error) {
@@ -140,7 +177,7 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 		os.Exit(1)
 	}
 
-	enforceRoutes, leave := cmd.parseArgs(args)
+	enforceRoutes, leave, waitForStarted, postStartSleep, batchSize := cmd.parseArgs(args)
 
 	// The getAppStatus calls will exit with an error if the named apps don't exist
 	if cmd.app1, err = cmd.getAppStatus(cliConnection, args[1]); nil != err {
@@ -164,34 +201,33 @@ func (cmd *ScaleoverCmd) ScaleoverCommand(cliConnection plugin.CliConnection, ar
 
 	count := cmd.app1.countRequested
 	if count == 0 {
-		fmt.Println("There are no instances of the source app to scale over")
+		fmt.Println("\nThere are no instances of the source app to scale over\n")
 		os.Exit(0)
 	}
 	sleepInterval := time.Duration(rolloverTime.Nanoseconds() / int64(count))
 
-	cmd.doScaleover(cliConnection, count, leave, sleepInterval)
+	cmd.doScaleover(cliConnection, count, leave, sleepInterval, waitForStarted, postStartSleep, batchSize)
 	fmt.Println()
 }
 
 func (cmd *ScaleoverCmd) doScaleover(cliConnection plugin.CliConnection,
-	count int, leave int, sleepInterval time.Duration) {
+	count int, leave int, sleepInterval time.Duration, waitForStarted bool, postStartSleep time.Duration, batchSize int) {
+  origInstances := count
 	count -= cmd.app2.countRunning
 	leave -= cmd.app2.countRunning
 
-	for count > 0 {
-		cmd.app2.scaleUp(cliConnection)
-		if count > leave {
-			cmd.app1.scaleDown(cliConnection)
-		} else {
-			fmt.Printf("Leaving ")
-		}
-		count--		
+  for count > 0 {
+    cmd.app2.scaleUp(cliConnection, origInstances, batchSize)
+    cmd.app1.scaleDown(cliConnection, leave, batchSize, cmd.app2, waitForStarted, postStartSleep)
+
+		count-=batchSize
 		cmd.showStatus()
 		if count > 0 {
 			time.Sleep(sleepInterval)
 		}
 	}
 }
+
 func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name string) (*AppStatus, error) {
 	app, err := cliConnection.GetApp(name)
 	if nil != err {
@@ -217,26 +253,63 @@ func (cmd *ScaleoverCmd) getAppStatus(cliConnection plugin.CliConnection, name s
 	return status, nil
 }
 
-func (app *AppStatus) scaleUp(cliConnection plugin.CliConnection) {
-	// If not already started, start it
-	if app.state != "started" {
+func (app *AppStatus) scaleUp(cliConnection plugin.CliConnection, origInstances int, batchSize int) {
+	app.countRequested+=batchSize
+  if(app.countRequested > origInstances){
+    app.countRequested = origInstances;
+  }
+  cliConnection.CliCommandWithoutTerminalOutput("scale", "-i", strconv.Itoa(app.countRequested), app.name)
+
+  // If not already started, start it
+	if app.state == "stopped" {
 		cliConnection.CliCommandWithoutTerminalOutput("start", app.name)
 		app.state = "started"
 	}
-	app.countRequested++
-	cliConnection.CliCommandWithoutTerminalOutput("scale", "-i", strconv.Itoa(app.countRequested), app.name)
 }
 
-func (app *AppStatus) scaleDown(cliConnection plugin.CliConnection) {
-	app.countRequested--
-	// If going to zero, stop the app
-	
-	if app.countRequested == 0 {
+func (app *AppStatus) scaleDown(cliConnection plugin.CliConnection, leave int,
+  batchSize int, app2 *AppStatus, waitForStarted bool, postStartSleep time.Duration) {
+
+  if waitForStarted {
+    for {
+      refreshedApp2Status, err := cliConnection.GetApp(app2.name)
+      if nil != err {
+    		fmt.Println("Can't scale down. Error")
+        break
+    	}
+
+      // iterate through instances
+      hasStarting := false
+      for _,instance := range refreshedApp2Status.Instances {
+        if(instance.State != "running") {
+          hasStarting = true
+          time.Sleep(1 * time.Second)
+          break //instance loop
+        }
+      }
+
+      if !hasStarting {
+        time.Sleep(postStartSleep)
+        break
+      } // while loop
+    }
+  }
+
+  app.countRequested-=batchSize
+
+  if(app.countRequested < leave) {
+    app.countRequested = leave
+  }
+
+	// If going to zero, stop the app, and force to one instance
+	if app.countRequested <= 0 {
+    app.countRequested = 1
 		cliConnection.CliCommandWithoutTerminalOutput("stop", app.name)
 		app.state = "stopped"
-	} else {
-		cliConnection.CliCommandWithoutTerminalOutput("scale", "-i", strconv.Itoa(app.countRequested), app.name)
 	}
+
+	cliConnection.CliCommandWithoutTerminalOutput("scale", "-i", strconv.Itoa(app.countRequested), app.name)
+
 }
 
 func (cmd *ScaleoverCmd) showStatus() {

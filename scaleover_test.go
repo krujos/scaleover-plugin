@@ -18,8 +18,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/cloudfoundry/cli/plugin/models"
-	"github.com/cloudfoundry/cli/plugin/pluginfakes"
+	"code.cloudfoundry.org/cli/plugin/models"
+	"code.cloudfoundry.org/cli/plugin/pluginfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -181,19 +181,19 @@ var _ = Describe("Scaleover", func() {
 		})
 
 		It("Starts a stopped app", func() {
-			appStatus.scaleUp(fakeCliConnection)
+			appStatus.scaleUp(fakeCliConnection, 1, 1)
 			Expect(appStatus.state).To(Equal("started"))
 		})
 
 		It("It increments the amount requested", func() {
 			running := appStatus.countRunning
-			appStatus.scaleUp(fakeCliConnection)
+			appStatus.scaleUp(fakeCliConnection, 3, 1)
 			Expect(appStatus.countRequested).To(Equal(running + 1))
 		})
 
 		It("Leaves a started app started", func() {
 			appStatus.state = "started"
-			appStatus.scaleUp(fakeCliConnection)
+			appStatus.scaleUp(fakeCliConnection, 1, 1)
 			Expect(appStatus.state).To(Equal("started"))
 		})
 
@@ -201,12 +201,21 @@ var _ = Describe("Scaleover", func() {
 
 	Describe("scale down", func() {
 		var appStatus *AppStatus
+    var appStatus2 *AppStatus
+    var zerotime time.Duration
 
 		BeforeEach(func() {
-			appStatus = &AppStatus{
+      appStatus = &AppStatus{
 				name:           "foo",
 				countRequested: 1,
 				countRunning:   1,
+				state:          "started",
+			}
+
+      appStatus2 = &AppStatus{
+				name:           "bar",
+				countRequested: 3,
+				countRunning:   3,
 				state:          "started",
 			}
 			fakeCliConnection = &pluginfakes.FakeCliConnection{}
@@ -214,25 +223,48 @@ var _ = Describe("Scaleover", func() {
 		})
 
 		It("Stops a started app going to zero instances", func() {
-			appStatus.scaleDown(fakeCliConnection)
+			appStatus.scaleDown(fakeCliConnection, 0, 1, appStatus, false, zerotime)
 			Expect(appStatus.state).To(Equal("stopped"))
 		})
 
-		It("It decrements the amount requested", func() {
-			running := appStatus.countRunning
-			appStatus.scaleDown(fakeCliConnection)
-			Expect(appStatus.countRequested).To(Equal(running - 1))
+    It("It decrements the amount requested", func() {
+			running := appStatus2.countRunning
+			appStatus2.scaleDown(fakeCliConnection, 0, 1, appStatus, false, zerotime)
+			Expect(appStatus2.countRequested).To(Equal(running - 1))
+      Expect(appStatus2.state).To(Equal("started"))
+		})
+
+    It("It decrements the batch-size 1 but leaves 1 stopped", func() {
+			appStatus.scaleDown(fakeCliConnection, 0, 1, appStatus, false, zerotime)
+			Expect(appStatus.countRequested).To(Equal(1)) //
+      Expect(appStatus.state).To(Equal("stopped"))
+		})
+
+    It("It decrements the batch-size requested but leaves 1 stopped", func() {
+			running := appStatus2.countRunning
+      batchSize := 2
+			appStatus2.scaleDown(fakeCliConnection, 0, batchSize, appStatus, false, zerotime)
+			Expect(appStatus2.countRequested).To(Equal(running - batchSize)) //
+      Expect(appStatus2.state).To(Equal("started"))
+		})
+
+    It("Leaves 1 instance stopped", func() {
+      appStatus.countRequested = 1
+      appStatus.countRunning = 1
+			appStatus.scaleDown(fakeCliConnection, 0, 1, appStatus, false, zerotime)
+			Expect(appStatus.countRequested).To(Equal(1))
+      Expect(appStatus.state).To(Equal("stopped"))
 		})
 
 		It("Leaves a stopped app stopped", func() {
 			appStatus.state = "stopped"
-			appStatus.scaleDown(fakeCliConnection)
+			appStatus.scaleDown(fakeCliConnection, 0, 1, appStatus, false, zerotime)
 			Expect(appStatus.state).To(Equal("stopped"))
 		})
 
 		It("Scales down the app", func() {
 			appStatus.countRequested = 2
-			appStatus.scaleDown(fakeCliConnection)
+			appStatus.scaleDown(fakeCliConnection, 0, 1, appStatus, false, zerotime)
 			Expect(appStatus.countRunning).To(Equal(1))
 			Expect(fakeCliConnection.CliCommandWithoutTerminalOutputCallCount()).To(Equal(1))
 		})
@@ -308,41 +340,47 @@ var _ = Describe("Scaleover", func() {
 		})
 
 		It("Should ignore route sanity if --no-route-check is at the end of args", func() {
-			enforceRoutes, _ := scaleoverCmdPlugin.parseArgs([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
+      enforceRoutes, _, _, _, _ := scaleoverCmdPlugin.parseArgs([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
+      //enforceRoutes, leave, waitForStarted, postStartSleep, batchSize := scaleoverCmdPlugin.parseArgs([]string{"scaleover", "two", "three", "1m", "--no-route-check"})
 			Expect(enforceRoutes).To(BeFalse())
 		})
 
 		It("Should carfuly consider routes if --no-route-check is not in the args", func() {
-			enforceRoutes, _ := scaleoverCmdPlugin.parseArgs([]string{"scaleover", "two", "three", "1m"})
+			enforceRoutes, _, _, _, _ := scaleoverCmdPlugin.parseArgs([]string{"scaleover", "two", "three", "1m"})
 			Expect(enforceRoutes).To(BeTrue())
 		})
 	})
 
 	Describe("Do Scaleover", func() {
+    var zerotime time.Duration
 		BeforeEach(func() {
 			scaleoverCmdPlugin = &ScaleoverCmd{}
 			var app1 = &AppStatus{
 				countRunning:   10,
 				countRequested: 10,
+        state:          "started",
 			}
 			var app2 = &AppStatus{
 				countRunning:   0,
 				countRequested: 0,
+        state:          "stopped",
 			}
 			scaleoverCmdPlugin.app1 = app1
 			scaleoverCmdPlugin.app2 = app2
 		})
 
 		It("should scale app2 to 10", func() {
-			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 0, 0)
+			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 0, 0, false, zerotime, 1)
 			Ω(scaleoverCmdPlugin.app2.countRequested).To(Equal(10))
-			Ω(scaleoverCmdPlugin.app1.countRequested).To(Equal(0))			
-		})		
-		
+			Ω(scaleoverCmdPlugin.app1.countRequested).To(Equal(1))
+      Ω(scaleoverCmdPlugin.app1.state).To(Equal("stopped"))
+		})
+
 		It("should scale app2 to 10 and app1 down to N if a <leave N> is specified", func() {
-			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 1, 0)
+			scaleoverCmdPlugin.doScaleover(fakeCliConnection, 10, 1, 0, false, zerotime, 1)
 			Ω(scaleoverCmdPlugin.app2.countRequested).To(Equal(10))
-			Ω(scaleoverCmdPlugin.app1.countRequested).To(Equal(1))			
-		})				
+			Ω(scaleoverCmdPlugin.app1.countRequested).To(Equal(1))
+      Ω(scaleoverCmdPlugin.app1.state).To(Equal("started"))
+		})
 	})
 })
