@@ -14,19 +14,19 @@ Both applications must exist within the same space, and by default should share 
 Select two apps in the same space, and roll traffic between them.
 
 ```
-➜  scaleover-plugin git:(master) ✗ cf apps                                                                                                                    $
+$ cf apps
 Getting apps in org test-org / space test-space as admin...
 OK
 
 name        requested state   instances   memory   disk   urls
 node_v1.0   started           10/10       128M     1G     node_v1.0.10.244.0.34.xip.io, node-prod.10.244.0.34.xip.io
 node_v1.1   stopped           0/1         128M     1G     node_v1.1.10.244.0.34.xip.io, node-prod.10.244.0.34.xip.io
-➜  scaleover-plugin git:(master) ✗ cf scaleover node_v1.0 node_v1.1 20s
+$ cf scaleover node_v1.0 node_v1.1 20s
 node_v1.0 (started) <<<<<<<<<<  node_v1.1 (stopped)
 node_v1.0 (started) <<<<<< >>>> node_v1.1 (started)
 node_v1.0 (started) <<< >>>>>>> node_v1.1 (started)
 node_v1.0 (stopped)  >>>>>>>>>> node_v1.1 (started)
-➜  scaleover-plugin git:(master) ✗ cf apps                                                                                                                    $
+$ cf apps
 Getting apps in org test-org / space test-space as admin...
 OK
 
